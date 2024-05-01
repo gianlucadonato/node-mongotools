@@ -1,6 +1,6 @@
 {
   "name": "@gspace/mongotools",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "description": "node-mongotools: a mongotools wrapper for nodejs. Freely inspired from github.com/amulyakashyap09/mbr",
   "author": "Boly38 <boly38@gmail.com>",
   "license": "MIT",
@@ -51,9 +51,7 @@
     "author": "Brice Vandeputte"
   },
   "dependencies": {
-    "date-fns": "^3.6.0",
-    "dropbox": "^10.34.0",
-    "dropbox-refresh-token": "^0.0.3"
+    "date-fns": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

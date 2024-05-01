@@ -173,9 +173,9 @@ var MTWrapper = class {
         return reject({ error: "INVALID_OPTIONS", message: "db: database name for dump is required." });
       }
       const dumpCmd = getOptionOrDefault(options, "dumpCmd", "mongodump");
-      const path4 = getOptionOrDefault(options, "path", "backup");
-      if (!import_fs.default.existsSync(path4)) {
-        import_fs.default.mkdirSync(path4, { recursive: true });
+      const path3 = getOptionOrDefault(options, "path", "backup");
+      if (!import_fs.default.existsSync(path3)) {
+        import_fs.default.mkdirSync(path3, { recursive: true });
       }
       const database = mt.databaseFromOptions(options);
       let command = mt.commandConnectFromOptions(options);
@@ -184,7 +184,7 @@ var MTWrapper = class {
       const dateTimeSuffix = getNowFormatted();
       const simplifiedName = database.replace(/[^a-zA-Z0-9\\-]/g, "_");
       const fileName = getOptionOrDefault(options, "fileName", `${simplifiedName}__${dateTimeSuffix}.gz`);
-      const fullFileName = `${path4}/${fileName}`;
+      const fullFileName = `${path3}/${fileName}`;
       try {
         command += ` --archive=${fullFileName} --gzip`;
         if ("showCommand" in options && options.showCommand === true) {
@@ -291,26 +291,26 @@ var import_fs2 = __toESM(require("fs"), 1);
 var import_path = __toESM(require("path"), 1);
 var fsPromise = import_fs2.default.promises;
 var MTFilesystem = class {
-  listFromFilesystem(path4) {
+  listFromFilesystem(path3) {
     return new Promise((resolve, reject) => {
-      if (!import_fs2.default.existsSync(path4)) {
-        return reject(new Error(`no dump path ${path4}`));
+      if (!import_fs2.default.existsSync(path3)) {
+        return reject(new Error(`no dump path ${path3}`));
       }
-      import_fs2.default.readdir(path4, (err, files) => {
+      import_fs2.default.readdir(path3, (err, files) => {
         if (err) {
           return reject(err);
         }
-        return resolve(files.map((f) => path4 + "/" + f));
+        return resolve(files.map((f) => path3 + "/" + f));
       });
     });
   }
-  fileSystemRotation(dryMode, path4, ctimeMsMax, cleanCount, minCount) {
+  fileSystemRotation(dryMode, path3, ctimeMsMax, cleanCount, minCount) {
     const mt = this;
     return new Promise((resolve, reject) => {
-      if (!import_fs2.default.existsSync(path4)) {
-        return reject(new Error(`no dump path ${path4}`));
+      if (!import_fs2.default.existsSync(path3)) {
+        return reject(new Error(`no dump path ${path3}`));
       }
-      mt.walk(path4).then((existingBackupsWithStats) => {
+      mt.walk(path3).then((existingBackupsWithStats) => {
         const initialBackupsCount = existingBackupsWithStats.length;
         const deprecatedBackups = mt.filterByDate(existingBackupsWithStats, ctimeMsMax);
         const deprecatedBackupsCount = deprecatedBackups.length;
@@ -368,196 +368,6 @@ var MTFilesystem = class {
   }
 };
 var MTFilesystem_default = MTFilesystem;
-
-// lib/MTDropbox.js
-var import_fs3 = __toESM(require("fs"), 1);
-var import_path2 = __toESM(require("path"), 1);
-var import_dropbox = require("dropbox");
-var import_dropbox_refresh_token = require("dropbox-refresh-token");
-var MUST_LOG_DEBUG = process.env.MT_DROPBOX_DEBUG === "true" || false;
-var MTDropbox = class {
-  // https://github.com/dropbox/dropbox-sdk-js/blob/main/examples/javascript/node/basic.js
-  listFromDropbox(options) {
-    return new Promise((resolve, reject) => {
-      getDropbox(options).then((dbx) => {
-        const path4 = options.getDropboxPath();
-        MUST_LOG_DEBUG && console.log(`Dropbox filesListFolder ${path4}:`);
-        dbx.filesListFolder({ path: path4 }).then((response) => {
-          const fileNames = response.result.entries.filter((e) => e[".tag"] === "file").map((e) => e.path_lower);
-          resolve(fileNames);
-        }).catch((filesListError) => {
-          MUST_LOG_DEBUG && console.log("filesListError", filesListError);
-          const { status, error } = filesListError;
-          if (status === 409) {
-            reject(new Error(`Dropbox path '${path4}' dont exist`));
-            return;
-          }
-          const errorMessage = `Dropbox list ${path4}: [status:${status}] ${error == null ? void 0 : error.error_summary}`;
-          reject(new Error(errorMessage));
-        });
-      }).catch((err) => reject(err));
-    });
-  }
-  // https://github.com/dropbox/dropbox-sdk-js/blob/main/examples/javascript/node/upload.js
-  mongoDumpUploadOnDropbox(options, dumpResult) {
-    return new Promise((resolve, reject) => {
-      const path4 = options.getDropboxPath();
-      const filename = dumpResult.fileName ? dumpResult.fileName : "mongodump.gz";
-      const dbxFilename = path4 + "/" + filename;
-      getDropbox(options).then((dbx) => {
-        import_fs3.default.readFile(dumpResult.fullFileName, (readFileError, contents) => {
-          if (readFileError) {
-            return reject(readFileError);
-          }
-          MUST_LOG_DEBUG && console.log(`Dropbox upload ${dbxFilename}:`);
-          dbx.filesUpload({ path: dbxFilename, contents }).then((response) => {
-            const { path_display, size } = response.result;
-            dumpResult.dropboxFile = path_display;
-            dumpResult.dropboxFileSize = size;
-            dumpResult.message = dumpResult.message + ` - uploaded on dropbox as ${dumpResult.dropboxFile} (${size} o)`;
-            resolve(dumpResult);
-          }).catch((uploadErr) => {
-            MUST_LOG_DEBUG && console.log("uploadErr", uploadErr);
-            const { status, error } = uploadErr;
-            const errorMessage = `Dropbox upload ${dbxFilename}: [status:${status}] ${error == null ? void 0 : error.error_summary}`;
-            reject(new Error(errorMessage));
-          });
-        });
-      }).catch((err) => reject(err));
-    });
-  }
-  // https://github.com/dropbox/dropbox-sdk-js/blob/main/examples/javascript/node/download.js
-  mongorestoreDownloadFromDropbox(options) {
-    return new Promise((resolve, reject) => {
-      const dbxFullFilename = options.dumpFile;
-      const localPath = options.getDropboxLocalPath();
-      const fileName = extractFilename(dbxFullFilename);
-      const fullFileName = localPath + "/" + fileName;
-      if (!dbxFullFilename.startsWith("/")) {
-        return reject(new Error(`Dropbox dumpFile ${dbxFullFilename} must start with '/'. Note for Windows users: unalias node and set MSYS_NO_PATHCONV=1 may help.`));
-      }
-      if (!import_fs3.default.existsSync(localPath)) {
-        import_fs3.default.mkdirSync(localPath, { recursive: true });
-      }
-      getDropbox(options).then((dbx) => {
-        MUST_LOG_DEBUG && console.log(`Dropbox download ${dbxFullFilename}:`);
-        dbx.filesDownload({ "path": dbxFullFilename }).then((response) => {
-          import_fs3.default.writeFileSync(fullFileName, response.result.fileBinary);
-          resolve({
-            message: `dump downloaded into ${fullFileName}`,
-            fileName,
-            fullFileName
-          });
-        }).catch((downloadErr) => {
-          MUST_LOG_DEBUG && console.log("downloadErr", downloadErr);
-          const { status, error } = downloadErr;
-          const errorMessage = `Dropbox download ${dbxFullFilename}: [status:${status}] ${error == null ? void 0 : error.error_summary}`;
-          reject(new Error(errorMessage));
-        });
-      }).catch((err) => reject(err));
-    });
-  }
-  rotation(options, dryMode, ctimeMsMax, cleanCount, minCount) {
-    const mt = this;
-    return new Promise((resolve, reject) => {
-      getDropbox(options).then((dbx) => {
-        const path4 = options.getDropboxPath();
-        MUST_LOG_DEBUG && console.log(`Dropbox list ${path4}`);
-        dbx.filesListFolder({ path: path4 }).then(async (response) => {
-          const result = response.result;
-          if (result.has_more === true) {
-            return reject(new Error(`dropbox backup directory ${path4} has more than 2000 files. Rotation has been skipped`));
-          }
-          const initialBackupsCount = result.length;
-          const deprecatedBackups = result.entries.filter((e) => e[".tag"] === "file").filter((e) => new Date(e.client_modified) < new Date(ctimeMsMax)).map((e) => {
-            const { name, path_lower, client_modified } = e;
-            return { name, path_lower, client_modified };
-          });
-          const deprecatedBackupsCount = deprecatedBackups.length;
-          const deletedBackups = await mt.backupsToClean(dbx, dryMode, deprecatedBackups, cleanCount, minCount);
-          const cleanedCount = deletedBackups.length;
-          const cleanedFiles = deletedBackups.map((db) => db.path_lower);
-          return resolve({ initialBackupsCount, deprecatedBackupsCount, cleanedCount, cleanedFiles });
-        }).catch((filesListError) => {
-          MUST_LOG_DEBUG && console.log("filesListError", filesListError);
-          const { status, error } = filesListError;
-          const errorMessage = `Dropbox list ${path4}: [status:${status}] ${error == null ? void 0 : error.error_summary}`;
-          reject(new Error(errorMessage));
-        });
-      }).catch((err) => reject(err));
-    });
-  }
-  async backupsToClean(dbx, dryMode, deprecatedBackups, cleanCount, minCount) {
-    if (deprecatedBackups === null || deprecatedBackups === void 0 || deprecatedBackups.length <= minCount) {
-      return [];
-    }
-    deprecatedBackups = deprecatedBackups.sort((a, b) => {
-      return (a.client_modified > b.client_modified) - (a.client_modified < b.client_modified);
-    });
-    MUST_LOG_DEBUG && console.log("dbx backupsToClean", { deprecatedBackups, cleanCount, minCount });
-    const toDelete = deprecatedBackups.length > minCount ? deprecatedBackups.slice(minCount, Math.min(minCount + cleanCount, deprecatedBackups.length)) : [];
-    MUST_LOG_DEBUG && console.log("dbx toDelete", { toDelete });
-    for (const toDeleteEntry of toDelete) {
-      if (!dryMode) {
-        await this.backupDelete(dbx, toDeleteEntry.path_lower).catch((error) => {
-          return Promise.reject(error);
-        });
-      } else {
-        console.log("*dry mode* DELETE", toDeleteEntry.path_lower);
-      }
-    }
-    return Promise.resolve(toDelete);
-  }
-  backupDelete(dbx, backupPath) {
-    return new Promise((resolve, reject) => {
-      dbx.filesDeleteV2({ "path": backupPath }).then(() => resolve(backupPath)).catch(reject);
-    });
-  }
-};
-function extractFilename(fullFileName) {
-  return import_path2.default.basename(fullFileName);
-}
-function getDropbox(options) {
-  if (!options.isDropboxEnabled) {
-    return Promise.reject(new Error("Dropbox is not enabled. Please update your environment."));
-  }
-  return new Promise((resolve, reject) => {
-    const {
-      dropboxToken,
-      // keep legacy token
-      dropboxRefreshToken,
-      dropboxAppKey,
-      dropboxAppSecret,
-      // current way to proceed
-      freshAccessToken
-      // accessToken: set when already retrieved from current session
-    } = options;
-    if (MUST_LOG_DEBUG && isSet(freshAccessToken)) {
-      console.log("we will reuse access-token");
-    }
-    const currentAccessToken = isSet(freshAccessToken) ? freshAccessToken : dropboxToken;
-    (0, import_dropbox_refresh_token.isAccessTokenValid)(currentAccessToken).then((result) => {
-      const { isValid, info } = result;
-      if (isValid) {
-        if (MUST_LOG_DEBUG) {
-          console.log(`use valid access-token from ${info == null ? void 0 : info.email}`);
-        }
-        resolve(new import_dropbox.Dropbox({ "accessToken": currentAccessToken }));
-      }
-    }).catch((rejectResult) => {
-      const { isValid, error } = rejectResult;
-      MUST_LOG_DEBUG && console.log(`isValid:${isValid} error:${error} - so dropboxRefreshAccessToken`);
-      if (!isSet(dropboxRefreshToken) || !isSet(dropboxAppKey) || !isSet(dropboxAppSecret)) {
-        reject(new Error("to refresh a dropbox access token, following options are required: dropboxRefreshToken, dropboxAppKey, dropboxAppSecret"));
-        return;
-      }
-      (0, import_dropbox_refresh_token.refreshAccessToken)(dropboxRefreshToken, dropboxAppKey, dropboxAppSecret).then((freshAccessToken2) => {
-        options.freshAccessToken = freshAccessToken2;
-        resolve(new import_dropbox.Dropbox({ "accessToken": freshAccessToken2 }));
-      }).catch((err) => reject(err));
-    });
-  });
-}
 
 // lib/MTOptions.js
 var MTOptions = class {
@@ -632,7 +442,7 @@ var isNotEmptyString = (value) => value !== void 0 && typeof value === "string" 
 var areNotEmptyStrings = (arr) => Array.isArray(arr) && arr.length > 0 && arr.reduce((rez, curValue) => rez && isNotEmptyString(curValue), true);
 
 // lib/MTEncrypt.js
-var import_fs4 = __toESM(require("fs"), 1);
+var import_fs3 = __toESM(require("fs"), 1);
 var import_crypto = __toESM(require("crypto"), 1);
 var algorithm = "aes-256-ctr";
 var expectedKeyLength = 32;
@@ -643,13 +453,13 @@ var MTEncrypt = class {
       if (!secretKey || secretKey.length !== expectedKeyLength) {
         throw new Error(`Encrypt algorithm ${algorithm} require a secret key having ${expectedKeyLength} length`);
       }
-      const inStream = import_fs4.default.createReadStream(source);
+      const inStream = import_fs3.default.createReadStream(source);
       const encrypt = import_crypto.default.createCipheriv(algorithm, secretKey, iv);
-      const outFileStream = import_fs4.default.createWriteStream(destination);
+      const outFileStream = import_fs3.default.createWriteStream(destination);
       inStream.pipe(encrypt).pipe(outFileStream);
       inStream.on("end", () => {
         if (removeSource === true) {
-          import_fs4.default.unlinkSync(source);
+          import_fs3.default.unlinkSync(source);
         }
         resolve();
       });
@@ -658,9 +468,9 @@ var MTEncrypt = class {
   decrypt(source, destination, secretKey) {
     return new Promise((resolve) => {
       console.info("decrypt " + source + " into " + destination);
-      const inStream = import_fs4.default.createReadStream(source);
+      const inStream = import_fs3.default.createReadStream(source);
       const decrypt = import_crypto.default.createDecipheriv(algorithm, secretKey, iv);
-      const outFileStream = import_fs4.default.createWriteStream(destination);
+      const outFileStream = import_fs3.default.createWriteStream(destination);
       inStream.pipe(decrypt).pipe(outFileStream);
       inStream.on("end", () => {
         resolve();
@@ -674,7 +484,6 @@ var MTEncrypt_default = MTEncrypt;
 var MongoTools = class {
   constructor() {
     this.wrapper = new MTWrapper_default();
-    this.dbx = new MTDropbox();
     this.fs = new MTFilesystem_default();
     this.enc = new MTEncrypt_default();
   }
@@ -682,14 +491,11 @@ var MongoTools = class {
     const mt = this;
     return new Promise((resolve, reject) => {
       const options = assumeOptions(opt);
-      const path4 = options.getPath();
-      mt.fs.listFromFilesystem(path4).then((filesystem) => {
+      const path3 = options.getPath();
+      mt.fs.listFromFilesystem(path3).then((filesystem) => {
         if (!options.isDropboxEnabled) {
-          return resolve({ path: path4, filesystem });
+          return resolve({ path: path3, filesystem });
         }
-        mt.dbx.listFromDropbox(options).then((dropbox) => {
-          resolve({ path: path4, filesystem, dropbox });
-        }).catch((err) => reject(err));
       }).catch((err) => reject(err));
     });
   }
@@ -709,11 +515,7 @@ var MongoTools = class {
     });
   }
   uploadOnDropboxIfEnabled(options, dumpResult, resolve, reject) {
-    if (options.isDropboxEnabled && dumpResult.fileName && dumpResult.fullFileName) {
-      this.dbx.mongoDumpUploadOnDropbox(options, dumpResult).then(resolve).catch((err) => reject(err));
-    } else {
-      resolve(dumpResult);
-    }
+    resolve(dumpResult);
   }
   encryptDump(opt, dumpResult) {
     const mt = this;
@@ -732,25 +534,14 @@ var MongoTools = class {
   }
   mongorestore(opt) {
     const options = assumeOptions(opt);
-    const path4 = options.getPath();
+    const path3 = options.getPath();
     const mt = this;
     return new Promise((resolve, reject) => {
       let toRestore = options.dumpFile;
       if (!toRestore) {
         return reject(new Error("dumpFile is required"));
       }
-      if (!toRestore.startsWith(path4) && options.isDropboxEnabled === true) {
-        mt.dbx.mongorestoreDownloadFromDropbox(options).then((downloadResult) => {
-          if (downloadResult === void 0) {
-            return;
-          }
-          console.log(downloadResult.message);
-          toRestore = downloadResult.fullFileName;
-          mt.decryptAndRestore(options, toRestore, resolve, reject);
-        }).catch((err) => reject(err));
-      } else {
-        mt.decryptAndRestore(options, toRestore, resolve, reject);
-      }
+      mt.decryptAndRestore(options, toRestore, resolve, reject);
     });
   }
   decryptAndRestore(options, toRestore, resolve, reject) {
@@ -790,23 +581,14 @@ var MongoTools = class {
     } catch (validationError) {
       return Promise.reject({ error: "INVALID_OPTIONS", message: validationError });
     }
-    const path4 = options.getPath();
+    const path3 = options.getPath();
     const ctimeMsMax = /* @__PURE__ */ new Date();
     ctimeMsMax.setDate(ctimeMsMax.getDate() - windowsDays);
     const ctimeMsMaxMs = ctimeMsMax.getTime();
     const mt = this;
     return new Promise((resolve, reject) => {
-      mt.fs.fileSystemRotation(rotationDryMode, path4, ctimeMsMaxMs, cleanCount, minCount).then((filesystemRotationResult) => {
-        if (options.isDropboxEnabled) {
-          mt.dbx.rotation(options, rotationDryMode, ctimeMsMax, cleanCount, minCount).then((dropboxRotationResult) => {
-            resolve({
-              filesystem: filesystemRotationResult,
-              dropbox: dropboxRotationResult
-            });
-          }).catch((err) => reject(err));
-        } else {
-          resolve({ filesystem: filesystemRotationResult });
-        }
+      mt.fs.fileSystemRotation(rotationDryMode, path3, ctimeMsMaxMs, cleanCount, minCount).then((filesystemRotationResult) => {
+        resolve({ filesystem: filesystemRotationResult });
       }).catch((err) => reject(err));
     });
   }
@@ -825,7 +607,7 @@ function assumeOptions(options) {
 var MongoTools_default = MongoTools;
 
 // lib/MTCommand.js
-var import_path3 = __toESM(require("path"), 1);
+var import_path2 = __toESM(require("path"), 1);
 var MTCommand = class {
   constructor() {
     this.mt = new MongoTools_default();
@@ -834,7 +616,7 @@ var MTCommand = class {
    * pick filename only from full file+path string
    */
   filenameOnly(fullName) {
-    return fullName ? fullName.substring(fullName.lastIndexOf(import_path3.default.sep) + 1, fullName.length) : "";
+    return fullName ? fullName.substring(fullName.lastIndexOf(import_path2.default.sep) + 1, fullName.length) : "";
   }
   /**
    * help user on usage
