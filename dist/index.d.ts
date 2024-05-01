@@ -256,7 +256,7 @@ class MTWrapper {
 
 //~ private
 function getNowFormatted() {
-    return format(new Date(), "yyyy--dd_HHMMss");
+    return format(new Date(), "yyyy-MM-dd_HHMMss");
 }
 
 function getOptionOrDefault(options, name, defaultValue) {

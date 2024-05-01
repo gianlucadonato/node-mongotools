@@ -227,7 +227,7 @@ var MTWrapper = class {
   }
 };
 function getNowFormatted() {
-  return format(/* @__PURE__ */ new Date(), "yyyy--dd_HHMMss");
+  return format(/* @__PURE__ */ new Date(), "yyyy-MM-dd_HHMMss");
 }
 function getOptionOrDefault(options, name, defaultValue) {
   return name in options && isSet(options[name]) ? options[name] : defaultValue;
