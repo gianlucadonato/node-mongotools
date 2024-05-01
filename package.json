@@ -1,5 +1,5 @@
 {
-  "name": "node-mongotools",
+  "name": "@gspace/mongotools",
   "version": "2.2.6",
   "description": "node-mongotools: a mongotools wrapper for nodejs. Freely inspired from github.com/amulyakashyap09/mbr",
   "author": "Boly38 <boly38@gmail.com>",
@@ -9,8 +9,8 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "node-mongotools": "./bin/index.js",
-    "mt": "./bin/index.js"
+    "node-mongotools": "bin/index.js",
+    "mt": "bin/index.js"
   },
   "scripts": {
     "lint": "eslint .",
@@ -24,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/boly38/node-mongotools.git"
+    "url": "git+https://github.com/boly38/node-mongotools.git"
   },
   "bugs": {
     "url": "https://github.com/boly38/node-mongotools/issues"
@@ -80,5 +80,11 @@
   },
   "jshintConfig": {
     "esversion": 6
+  },
+  "homepage": "https://github.com/boly38/node-mongotools#readme",
+  "directories": {
+    "example": "examples",
+    "lib": "lib",
+    "test": "tests"
   }
 }
