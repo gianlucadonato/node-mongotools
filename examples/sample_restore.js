@@ -5,7 +5,7 @@
 // import { MongoTools, MTOptions, MTCommand } from "node-mongotools";
 
 // import from inside project
-import {MongoTools, MTCommand} from "../lib/mt.js";
+import {MongoTools, MTCommand} from "../lib/index.js";
 
 async function restore(uri, dumpFile) {
     const mt = new MongoTools();

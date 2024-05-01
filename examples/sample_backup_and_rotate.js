@@ -3,7 +3,7 @@ import os from "os";
 // node-mongotools users must use this line
 // import { MongoTools, MTOptions, MTCommand } from "node-mongotools";
 // import from inside project
-import {MongoTools, MTCommand} from "../lib/mt.js";
+import {MongoTools, MTCommand} from "../lib/index.js";
 
 async function dumpAndRotate(uri, path) {
     const mt = new MongoTools();

@@ -1,4 +1,4 @@
-import { MTCommand } from './lib/mt.js'; // as library client you may use : import { MongoTools, MTOptions, MTCommand } from "node-mongotools";
+import { MTCommand } from './lib/index.js'; // as library client you may use : import { MongoTools, MTOptions, MTCommand } from "node-mongotools";
 import process from "node:process";
 
 // take first command line argument

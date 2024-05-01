@@ -5,13 +5,16 @@
   "author": "Boly38 <boly38@gmail.com>",
   "license": "MIT",
   "type": "module",
-  "main": "./lib/mt.js",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
-    "node-mongotools": "./bin/mt.js",
-    "mt": "./bin/mt.js"
+    "node-mongotools": "./bin/index.js",
+    "mt": "./bin/index.js"
   },
   "scripts": {
     "lint": "eslint .",
+    "build": "rimraf dist && tsup lib/index.js --format cjs,esm --dts-resolve",
     "audit": "npm audit --omit=dev",
     "preinstall": "npx force-resolutions",
     "test-requirement": "echo You must do: source ./env/initEnv.test.sh",
@@ -67,7 +70,9 @@
     "mocha": "^10.4.0",
     "mongoose": "^8.3.2",
     "npm-force-resolutions": "^0.0.10",
-    "nyc": "^15.1.0"
+    "nyc": "^15.1.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5"
   },
   "resolutions": {
     "json5": "^2.2.3",
